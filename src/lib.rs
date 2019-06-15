@@ -13,7 +13,7 @@ use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 
 const MAC_SIZE: usize = 6;
 const MAC_PER_MAGIC: usize = 16;
-static HEADER: [u8; 6] = [0xFF; 6];
+const HEADER: [u8; 6] = [0xFF; 6];
 
 /// Wake-on-LAN packet
 pub struct WolPacket {
