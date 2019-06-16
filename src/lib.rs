@@ -17,6 +17,7 @@ const HEADER: [u8; 6] = [0xFF; 6];
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug)]
 pub enum Error {
 	Hex(hex::FromHexError),
 	IO(std::io::Error),
