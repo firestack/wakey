@@ -31,6 +31,7 @@ impl std::convert::From<std::io::Error> for Error {
 	}
 }
 /// Wake-on-LAN packet
+#[derive(Debug)]
 pub struct WolPacket {
 	/// WOL packet bytes
 	packet: Vec<u8>,
@@ -141,9 +142,8 @@ mod tests {
 		let extended_mac = super::WolPacket::extend_mac(&mac);
 
 		assert_eq!(extended_mac.len(), super::MAC_PER_MAGIC * super::MAC_SIZE);
-		assert_eq!(
-			&extended_mac[(super::MAC_PER_MAGIC - 1) * super::MAC_SIZE..],
-			&mac[..]
+		assert!(
+			&extended_mac.iter().zip(&mac).all(|(i,v)| *i == v)
 		);
 	}
 
@@ -152,21 +152,27 @@ mod tests {
 		let mac = "01:02:03:04:05:06";
 		let result = super::WolPacket::mac_to_byte(mac, ':');
 
-		assert_eq!(result, vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+		assert!(result.unwrap().eq(&vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06]));
 	}
 
 	#[test]
-	#[should_panic]
 	fn mac_to_byte_invalid_chars_test() {
 		let mac = "ZZ:02:03:04:05:06";
-		super::WolPacket::mac_to_byte(mac, ':');
+
+		use hex;
+		// TODO: FIX THIS
+		if let Err(super::Error::Hex(hex::FromHexError::InvalidHexCharacter{c:'Z', index:0})) = super::WolPacket::mac_to_byte(mac, ':') {
+		} else {
+			dbg!(super::WolPacket::mac_to_byte(mac, ':').unwrap_err() );
+			assert!(false);
+		}
+		// assert_eq!(super::WolPacket::mac_to_byte(mac, ':'), Err(super::Error::Hex(hex::FromHexError::InvalidHexCharacter('Z', 0))));
 	}
 
 	#[test]
-	#[should_panic]
 	fn mac_to_byte_invalid_separator_test() {
 		let mac = "01002:03:04:05:06";
-		super::WolPacket::mac_to_byte(mac, ':');
+		assert!(super::WolPacket::mac_to_byte(mac, ':').is_err());
 	}
 
 	#[test]
