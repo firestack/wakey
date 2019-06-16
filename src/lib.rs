@@ -15,6 +15,20 @@ const MAC_SIZE: usize = 6;
 const MAC_PER_MAGIC: usize = 16;
 const HEADER: [u8; 6] = [0xFF; 6];
 
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub enum Error {
+	Hex(hex::FromHexError),
+	IO(std::io::Error),
+	InvalidHexStringLength,
+	InvalidHexArrayLength,
+}
+
+impl std::convert::From<std::io::Error> for Error {
+	fn from(error: std::io::Error) -> Self {
+		Error::IO(error)
+	}
+}
 /// Wake-on-LAN packet
 pub struct WolPacket {
 	/// WOL packet bytes
@@ -27,10 +41,14 @@ impl WolPacket {
 	/// ```
 	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]);
 	/// ```
-	pub fn from_bytes(mac: &[u8]) -> WolPacket {
-		WolPacket {
+	pub fn from_bytes(mac: &[u8]) -> Result<WolPacket> {
+		match mac.len() {
+			MAC_SIZE => Ok(WolPacket {
 			packet: WolPacket::create_packet_bytes(mac),
+		}),
+			_ => Err(Error::InvalidHexArrayLength)
 		}
+
 	}
 
 	/// Creates WOL packet from string MAC representation (e.x. 00:01:02:03:04:05)
@@ -40,8 +58,9 @@ impl WolPacket {
 	/// ```
 	/// # Panic
 	///  Panics when input MAC is invalid (i.e. contains non-byte characters)
-	pub fn from_string(data: &str, sep: char) -> WolPacket {
-		WolPacket::from_bytes(&WolPacket::mac_to_byte(data, sep))
+	pub fn from_string(data: &str, sep: char) -> Result<WolPacket> {
+		let bytes = WolPacket::mac_to_byte(data, sep)?;
+		WolPacket::from_bytes(&bytes)
 	}
 
 	/// Broadcasts the magic packet from / to default address
@@ -52,7 +71,7 @@ impl WolPacket {
 	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]);
 	/// wol.send_magic();
 	/// ```
-	pub fn send_magic(&self) -> std::io::Result<()> {
+	pub fn send_magic(&self) -> Result<()> {
 		self.send_magic_to(
 			SocketAddr::from(([0, 0, 0, 0], 0)),
 			SocketAddr::from(([255, 255, 255, 255], 9)),
@@ -68,7 +87,7 @@ impl WolPacket {
 	/// let dst = SocketAddr::from(([255,255,255,255], 9));
 	/// wol.send_magic_to(src, dst);
 	/// ```
-	pub fn send_magic_to<A: ToSocketAddrs>(&self, src: A, dst: A) -> std::io::Result<()> {
+	pub fn send_magic_to<A: ToSocketAddrs>(&self, src: A, dst: A) -> Result<()> {
 		let udp_sock = UdpSocket::bind(src)?;
 		udp_sock.set_broadcast(true)?;
 		udp_sock.send_to(&self.packet, dst)?;
@@ -77,24 +96,31 @@ impl WolPacket {
 	}
 
 	/// Converts string representation of MAC address (e.x. 00:01:02:03:04:05) to raw bytes.
-	/// # Panic
-	/// Panics when input MAC is invalid (i.e. contains non-byte characters)
-	fn mac_to_byte(data: &str, sep: char) -> Vec<u8> {
-		data.split(sep)
-			.flat_map(|x| hex::decode(x).expect("Invalid mac!"))
-			.collect()
+	fn mac_to_byte(data: &str, sep: char) -> Result<Vec<u8>> {
+		let str_out = &data.split(sep)
+				.map(|v| v.bytes())
+				.flatten()
+				.collect::<Vec<u8>>();
+
+		let hex_out = hex::decode(str_out)
+			.map_err(Error::Hex)?;
+
+		match hex_out.len() {
+			MAC_SIZE => Ok(hex_out),
+			_ => Err(Error::InvalidHexStringLength)
+		}
 	}
 
 	/// Extends the MAC address to fill the magic packet
-	fn extend_mac(mac: &[u8]) -> Vec<u8> {
+	fn extend_mac(mac: &[u8]) -> Vec<&u8> {
 		iter::repeat(mac)
 			.take(MAC_PER_MAGIC)
 			.flatten()
-			.cloned()
 			.collect()
 	}
 
 	/// Creates bytes of the magic packet from MAC address
+	/// TODO: Cleanup to use refs
 	fn create_packet_bytes(mac: &[u8]) -> Vec<u8> {
 		let mut packet = Vec::with_capacity(HEADER.len() + MAC_SIZE * MAC_PER_MAGIC);
 
