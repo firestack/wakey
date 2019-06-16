@@ -74,8 +74,9 @@ impl WolPacket {
 	/// Destination 255.255.255.255:9
 	/// # Example
 	/// ```
-	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
-	/// wol.send_magic().unwrap();
+	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05])?;
+	/// wol.send_magic()?;
+	/// # Ok::<(), wakey::Error>(())
 	/// ```
 	pub fn send_magic(&self) -> Result<usize> {
 		self.send_magic_to(
@@ -88,10 +89,11 @@ impl WolPacket {
 	/// # Example
 	/// ```
 	/// use std::net::SocketAddr;
-	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
+	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05])?;
 	/// let src = SocketAddr::from(([0,0,0,0], 0));
 	/// let dst = SocketAddr::from(([255,255,255,255], 9));
 	/// wol.send_magic_to(src, dst);
+	/// # Ok::<(), wakey::Error>(())
 	/// ```
 	pub fn send_magic_to<A: ToSocketAddrs>(&self, src: A, dst: A) -> Result<usize> {
 		let udp_sock = UdpSocket::bind(src)?;
