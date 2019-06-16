@@ -1,16 +1,16 @@
-//! Library for managing Wake-on-LAN packets.
-//! # Example
-//! ```
-//! fn main() -> wakey::Result<()> {
-//! 	let wol = wakey::WolPacket::from_string("01:02:03:04:05:06", ':')?;
-//! 	let result = wol.send_magic();
-//! 	match result {
-//! 		Ok(_) => println!("Sent the magic packet!"),
-//! 		Err(_) => println!("Failed to send the magic packet!"),
-//! 	};
-//! 	result.map(|_| ())
-//! }
-//! ```
+/*! Library for managing Wake-on-LAN packets.
+# Example
+```
+let wol = wakey::WolPacket::from_string("01:02:03:04:05:06", ':')?;
+let result = wol.send_magic();
+match result {
+	Ok(_) => println!("Sent the magic packet!"),
+	Err(_) => println!("Failed to send the magic packet!"),
+};
+# Ok::<(), wakey::Error>(())
+
+```
+*/
 
 use std::iter;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
