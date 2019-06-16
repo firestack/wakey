@@ -88,12 +88,12 @@ impl WolPacket {
 	/// let dst = SocketAddr::from(([255,255,255,255], 9));
 	/// wol.send_magic_to(src, dst);
 	/// ```
-	pub fn send_magic_to<A: ToSocketAddrs>(&self, src: A, dst: A) -> Result<()> {
+	pub fn send_magic_to<A: ToSocketAddrs>(&self, src: A, dst: A) -> Result<usize> {
 		let udp_sock = UdpSocket::bind(src)?;
 		udp_sock.set_broadcast(true)?;
-		udp_sock.send_to(&self.packet, dst)?;
+		let bytes_sent = udp_sock.send_to(&self.packet, dst)?;
 
-		Ok(())
+		Ok(bytes_sent)
 	}
 
 	/// Converts string representation of MAC address (e.x. 00:01:02:03:04:05) to raw bytes.
