@@ -1,6 +1,6 @@
 [package]
 name = "wakey"
-version = "0.1.1"
+version = "1.0.0"
 
 authors = ["Hubert Bugaj<lesny.rumcajs@gmail.com>", "Kayla Firestack<dev@kaylafire.me>"]
 edition = "2018"
@@ -13,4 +13,4 @@ keywords = ["wol", "wake-on-lan"]
 categories = ["network-programming"]
 
 [dependencies]
-hex = "0.3.2"
+hex = "^0"
