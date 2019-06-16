@@ -72,7 +72,7 @@ impl WolPacket {
 	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]);
 	/// wol.send_magic();
 	/// ```
-	pub fn send_magic(&self) -> Result<()> {
+	pub fn send_magic(&self) -> Result<usize> {
 		self.send_magic_to(
 			SocketAddr::from(([0, 0, 0, 0], 0)),
 			SocketAddr::from(([255, 255, 255, 255], 9)),
