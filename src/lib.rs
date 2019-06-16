@@ -1,10 +1,14 @@
 //! Library for managing Wake-on-LAN packets.
 //! # Example
 //! ```
-//! let wol = wakey::WolPacket::from_string("01:02:03:04:05:06", ':');
-//! match wol.send_magic() {
-//!     Ok(_) => println!("Sent the magic packet!"),
-//!     Err(_) => println!("Failed to send the magic packet!")
+//! fn main() -> wakey::Result<()> {
+//! 	let wol = wakey::WolPacket::from_string("01:02:03:04:05:06", ':')?;
+//! 	let result = wol.send_magic();
+//! 	match result {
+//! 		Ok(_) => println!("Sent the magic packet!"),
+//! 		Err(_) => println!("Failed to send the magic packet!"),
+//! 	};
+//! 	result.map(|_| ())
 //! }
 //! ```
 
@@ -70,8 +74,8 @@ impl WolPacket {
 	/// Destination 255.255.255.255:9
 	/// # Example
 	/// ```
-	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]);
-	/// wol.send_magic();
+	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
+	/// wol.send_magic().unwrap();
 	/// ```
 	pub fn send_magic(&self) -> Result<usize> {
 		self.send_magic_to(
@@ -84,7 +88,7 @@ impl WolPacket {
 	/// # Example
 	/// ```
 	/// use std::net::SocketAddr;
-	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]);
+	/// let wol = wakey::WolPacket::from_bytes(&vec![0x00, 0x01, 0x02, 0x03, 0x04, 0x05]).unwrap();
 	/// let src = SocketAddr::from(([0,0,0,0], 0));
 	/// let dst = SocketAddr::from(([255,255,255,255], 9));
 	/// wol.send_magic_to(src, dst);
