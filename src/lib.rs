@@ -50,9 +50,9 @@ impl WolPacket {
 	pub fn from_bytes(mac: &[u8]) -> Result<WolPacket> {
 		match mac.len() {
 			MAC_SIZE => Ok(WolPacket {
-			packet: WolPacket::create_packet_bytes(mac),
-		}),
-			_ => Err(Error::InvalidHexArrayLength)
+				packet: WolPacket::create_packet_bytes(mac),
+			}),
+			_ => Err(Error::InvalidHexArrayLength),
 		}
 
 	}
@@ -105,26 +105,23 @@ impl WolPacket {
 
 	/// Converts string representation of MAC address (e.x. 00:01:02:03:04:05) to raw bytes.
 	fn mac_to_byte(data: &str, sep: char) -> Result<Vec<u8>> {
-		let str_out = &data.split(sep)
-				.map(|v| v.bytes())
-				.flatten()
-				.collect::<Vec<u8>>();
+		let str_out = &data
+			.split(sep)
+			.map(|v| v.bytes())
+			.flatten()
+			.collect::<Vec<u8>>();
 
-		let hex_out = hex::decode(str_out)
-			.map_err(Error::Hex)?;
+		let hex_out = hex::decode(str_out).map_err(Error::Hex)?;
 
 		match hex_out.len() {
 			MAC_SIZE => Ok(hex_out),
-			_ => Err(Error::InvalidHexStringLength)
+			_ => Err(Error::InvalidHexStringLength),
 		}
 	}
 
 	/// Extends the MAC address to fill the magic packet
-	fn extend_mac(mac: &[u8]) -> Vec<&u8> {
-		iter::repeat(mac)
-			.take(MAC_PER_MAGIC)
-			.flatten()
-			.collect()
+	fn extend_mac(mac: &[u8]) -> Vec<u8> {
+		iter::repeat(mac).take(MAC_PER_MAGIC).flatten().cloned().collect()
 	}
 
 	/// Creates bytes of the magic packet from MAC address
@@ -148,9 +145,13 @@ mod tests {
 		let extended_mac = super::WolPacket::extend_mac(&mac);
 
 		assert_eq!(extended_mac.len(), super::MAC_PER_MAGIC * super::MAC_SIZE);
-		assert!(
-			&extended_mac.iter().zip(&mac).all(|(i,v)| *i == v)
-		);
+		for i in 0..super::MAC_PER_MAGIC {
+			let start = super::MAC_SIZE * i;
+			let end = super::MAC_SIZE * ( i + 1 );
+
+			assert_eq!(&mac[..], &extended_mac[start..end]);
+		}
+		//assert!(&extended_mac.iter().zip(&mac).all(|(i, v)| *i == v));
 	}
 
 	#[test]
@@ -158,7 +159,9 @@ mod tests {
 		let mac = "01:02:03:04:05:06";
 		let result = super::WolPacket::mac_to_byte(mac, ':');
 
-		assert!(result.unwrap().eq(&vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06]));
+		assert!(result
+			.unwrap()
+			.eq(&vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06]));
 	}
 
 	#[test]
@@ -167,9 +170,11 @@ mod tests {
 
 		use hex;
 		// TODO: FIX THIS
-		if let Err(super::Error::Hex(hex::FromHexError::InvalidHexCharacter{c:'Z', index:0})) = super::WolPacket::mac_to_byte(mac, ':') {
+		if let Err(super::Error::Hex(hex::FromHexError::InvalidHexCharacter { c: 'Z', index: 0 })) =
+			super::WolPacket::mac_to_byte(mac, ':')
+		{
 		} else {
-			dbg!(super::WolPacket::mac_to_byte(mac, ':').unwrap_err() );
+			dbg!(super::WolPacket::mac_to_byte(mac, ':').unwrap_err());
 			assert!(false);
 		}
 		// assert_eq!(super::WolPacket::mac_to_byte(mac, ':'), Err(super::Error::Hex(hex::FromHexError::InvalidHexCharacter('Z', 0))));
@@ -190,5 +195,24 @@ mod tests {
 			super::MAC_SIZE * super::MAC_PER_MAGIC + super::HEADER.len()
 		);
 		assert!(bytes.iter().all(|&x| x == 0xFF));
+	}
+
+	#[test]
+	fn send_test_packet() -> super::Result<()> {
+		let wol = super::WolPacket::from_string("DE AD BE EF CA FE", ' ')?;
+		let s = std::net::UdpSocket::bind("0.0.0.0:9").expect("Could not listen on port ::9");
+		let mut buf = [0; 102];
+
+		assert_eq!(wol.send_magic().ok(), Some(102));
+
+		let (_amt, _src) = s.recv_from(&mut buf).expect("Could not read socket");
+		for i in 0..buf.len() {
+			print!("{}, ", buf[i]);
+		}
+		println!();
+		dbg!(_amt);
+		dbg!(_src);
+		assert_eq!(&buf[..], &wol.packet[..]);
+		Ok(())
 	}
 }
